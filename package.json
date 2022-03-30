@@ -1,0 +1,43 @@
+{
+  "name": "@uniswap/v2-periphery",
+  "version": "1.1.0-beta.0",
+  "description": "🎚 Peripheral smart contracts for interacting with Uniswap V2",
+  "engines": {
+    "node": ">=10"
+  },
+  "homepage": "https://uniswap.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Uniswap/uniswap-v2-periphery"
+  },
+  "files": [
+    "build",
+    "contracts"
+  ],
+  "dependencies": {
+    "@openzeppelin/contracts": "3.4.2",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^9.1.0",
+    "@uniswap/lib": "^4.0.1-alpha",
+    "@uniswap/v2-core": "1.0.0",
+    "chai": "^4.3.6",
+    "mocha": "^9.2.2"
+  },
+  "devDependencies": {
+    "ethereum-waffle": "^3.4.4",
+    "ethereumjs-util": "^6.2.0",
+    "ncp": "^2.0.0",
+    "patch-package": "^6.4.7",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.0",
+    "solc": "0.6.6",
+    "ts-node": "^8.5.4",
+    "typescript": "^3.7.3"
+  },
+  "scripts": {
+    "postinstall": "patch-package",
+    "flatten": "waffle flatten",
+    "compile": "waffle .waffle.json",
+    "test": "npm run compile && mocha "
+  }
+}

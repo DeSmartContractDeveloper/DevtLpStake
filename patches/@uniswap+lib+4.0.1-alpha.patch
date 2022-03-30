@@ -1,0 +1,15 @@
+diff --git a/node_modules/@uniswap/lib/contracts/libraries/FixedPoint.sol b/node_modules/@uniswap/lib/contracts/libraries/FixedPoint.sol
+index 27d0ed6..0edfc06 100644
+--- a/node_modules/@uniswap/lib/contracts/libraries/FixedPoint.sol
++++ b/node_modules/@uniswap/lib/contracts/libraries/FixedPoint.sol
+@@ -23,7 +23,9 @@ library FixedPoint {
+     uint256 public constant Q112 = 0x10000000000000000000000000000; // 2**112
+     uint256 private constant Q224 = 0x100000000000000000000000000000000000000000000000000000000; // 2**224
+     uint256 private constant LOWER_MASK = 0xffffffffffffffffffffffffffff; // decimal of UQ*x112 (lower 112 bits)
+-
++    function decode112with18(uq112x112 memory self) internal pure returns (uint) {
++            return uint(self._x) / 5192296858534827;
++    }
+     // encode a uint112 as a UQ112x112
+     function encode(uint112 x) internal pure returns (uq112x112 memory) {
+         return uq112x112(uint224(x) << RESOLUTION);
