@@ -6,11 +6,11 @@ import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/lib/contracts/libraries/FixedPoint.sol';
 import '../libraries/UniswapV2OracleLibrary.sol';
 import '../libraries/UniswapV2Library.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract Oracle {
-    
+contract Oracle is Ownable {
     using FixedPoint for *;
-    
+
     struct Pair {
         address token0;
         address token1;
@@ -18,6 +18,7 @@ contract Oracle {
         uint256 price1CumulativeLast;
         uint32 blockTimestampLast;
         uint256 period;
+        bool isManual;
         FixedPoint.uq112x112 price0Average;
         FixedPoint.uq112x112 price1Average;
     }
@@ -27,6 +28,14 @@ contract Oracle {
 
     event PairAdd(address pair, uint256 period);
     event PairPriceSync(address pair, uint256 price0With18, uint256 price1With18);
+
+    function setPairPrice(address pair, uint112 price0) external onlyOwner {
+        Pair storage _pair = pairs[pair];
+        _pair.isManual = true;
+        _pair.price0Average = FixedPoint.encode(price0);
+        _pair.price1Average = FixedPoint.fraction(1, price0);
+        log(pair);
+    }
 
     function addPair(address pair, uint256 period) external {
         Pair storage _pair_ = pairs[pair];
@@ -39,6 +48,7 @@ contract Oracle {
             token1: _pair.token1(),
             blockTimestampLast: _ts,
             period: period,
+            isManual: false,
             price0CumulativeLast: _pair.price0CumulativeLast(),
             price1CumulativeLast: _pair.price1CumulativeLast(),
             price0Average: FixedPoint.encode(0),
@@ -64,7 +74,7 @@ contract Oracle {
         _pair.price0CumulativeLast = price0Cumulative;
         _pair.price1CumulativeLast = price1Cumulative;
         _pair.blockTimestampLast = blockTimestamp;
-        emit PairPriceSync(pair, _pair.price0Average.decode112with18(), _pair.price1Average.decode112with18());
+        log(pair);
     }
 
     function updatePairs() external {
@@ -93,6 +103,14 @@ contract Oracle {
         } else {
             effect = false;
         }
+        if (_pair.isManual) {
+            effect = true;
+        }
+    }
+
+    function log(address pair) internal {
+        (uint256 p0, uint256 p1) = this.tokenPirceWith18(pair);
+        emit PairPriceSync(pair, p0, p1);
     }
 
     function tokenPirceWith18(address pair) external view returns (uint256 token0Price, uint256 token1Price) {
