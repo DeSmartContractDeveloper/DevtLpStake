@@ -24,7 +24,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 index;
         uint256 amount;
         uint256 value;
-        uint256 relaseAmount;
+        uint256 releaseAmount;
         uint256 startTs;
     }
 
@@ -48,7 +48,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     uint256 public available1Amount;
 
     mapping(uint256 => Strategy) public strategys;
-    mapping(uint256 => ReleaseInfo) public relaseInfo;
+    mapping(uint256 => ReleaseInfo) public releaseInfo;
 
     event InjectToken(address from, uint256 amount0, uint256 amount1, uint256 syncAmount);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
@@ -134,7 +134,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     function unstake(uint256 tokenId) external nonReentrant {
         require(ownerOf(tokenId) == msg.sender, 'ST: token owner error');
-        ReleaseInfo storage info = relaseInfo[tokenId];
+        ReleaseInfo storage info = releaseInfo[tokenId];
         uint256 amount = calcUnstakeAmount(tokenId);
         require(amount > 0, 'ST: no token to unstake');
         uint256 releaseAmount = amount;
@@ -144,22 +144,22 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             }
             available0Amount = available0Amount.sub(releaseAmount);
         }
-        info.relaseAmount = info.relaseAmount.add(releaseAmount);
+        info.releaseAmount = info.releaseAmount.add(releaseAmount);
         SafeERC20.safeTransfer(IERC20(stToken), msg.sender, releaseAmount);
         emit Unstake(msg.sender, tokenId, releaseAmount);
     }
 
     function calcUnstakeAmount(uint256 tokenId) public view returns (uint256) {
         require(_exists(tokenId), 'ST: token not found');
-        ReleaseInfo storage info = relaseInfo[tokenId];
+        ReleaseInfo storage info = releaseInfo[tokenId];
         uint256 amount = 0;
         if (info.index > 0) {
-            require(info.relaseAmount < info.amount, 'ST: release finish');
-            uint256 remainAmount = info.amount.sub(info.relaseAmount);
+            require(info.releaseAmount < info.amount, 'ST: release finish');
+            uint256 remainAmount = info.amount.sub(info.releaseAmount);
             amount = info.amount.div(strategys[info.index].duration).mul((block.timestamp.sub(info.startTs)));
             if (amount > remainAmount) amount = remainAmount;
         } else {
-            require(info.relaseAmount == 0, 'ST: relased finish 2');
+            require(info.releaseAmount == 0, 'ST: relased finish 2');
             require(
                 block.timestamp >= strategys[info.index].duration + info.startTs &&
                     block.timestamp <= strategys[info.index].duration + info.startTs + 1 days,
@@ -233,7 +233,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             require(available1Amount > 0, 'ST: not available token1');
         }
         uint256 tokenId = _mintToken();
-        relaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount, value, 0, block.timestamp);
+        releaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount, value, 0, block.timestamp);
         emit Stake(msg.sender, pair, s, lp, tokenId, amount, value, price);
     }
 
