@@ -37,7 +37,7 @@ contract Oracle is Ownable {
         log(pair);
     }
 
-    function addPair(address pair, uint256 period) external {
+    function addPair(address pair, uint256 period) external onlyOwner {
         Pair storage _pair_ = pairs[pair];
         require(_pair_.token0 == address(0) && _pair_.token1 == address(0), 'Oracle: pair have been add');
         IUniswapV2Pair _pair = IUniswapV2Pair(pair);
