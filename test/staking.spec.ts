@@ -29,6 +29,7 @@ describe('Test stake lp and back to st token ', async () => {
       await provider.send('evm_mine', [])
     }
   }
+  let deadTs = 0
 
   it('test staking and unstake', async () => {
     const [wallet] = provider.getWallets()
@@ -84,14 +85,21 @@ describe('Test stake lp and back to st token ', async () => {
     blockTimestamp = (await stPair.getReserves())[2]
     console.log('after block ts ', blockTimestamp)
 
-    let devtContract = await deployContract(wallet, DevtJson, [
-      stToken.address,
-      stPair.address,
-      oracle.address,
-      UniHelper.address,
-      true // st token in st-dai pair is the token0
-    ])
-    await stToken.transfer(devtContract.address, bigNum)
+    let devtContract = await deployContract(
+      wallet,
+      DevtJson,
+      [
+        stToken.address,
+        stPair.address,
+        oracle.address,
+        UniHelper.address,
+        true // st token in st-dai pair is the token0
+      ],
+      overrides
+    )
+    console.log('injectToken')
+    await stToken.approve(devtContract.address, bigNum)
+    await devtContract.injectToken(BigNumber.from(bigNum).div(2), BigNumber.from(bigNum).div(2))
     devtContract = devtContract.connect(wallet)
     await devtContract.setPair(
       ljPair.address,
@@ -109,6 +117,7 @@ describe('Test stake lp and back to st token ', async () => {
     console.log('stake block is ', b)
     let blockInfo = await provider.getBlock(b)
     console.log('--stake block ts--', blockInfo.timestamp)
+    deadTs = blockInfo.timestamp * 2
     await runBlock(50)
     b = await provider.getBlockNumber()
     blockInfo = await provider.getBlock(b)
@@ -125,7 +134,9 @@ describe('Test stake lp and back to st token ', async () => {
 
     console.log('stake dai')
     await daiToken.approve(devtContract.address, expandTo18Decimals(100000000000))
-    let stakeResult = await (await devtContract.stakeToken(ljPair.address, expandTo18Decimals(10000), 1)).wait()
+    let stakeResult = await (
+      await devtContract.stakeToken(ljPair.address, expandTo18Decimals(10000), 1, deadTs, 1, overrides)
+    ).wait()
     console.log('stake result ', stakeResult)
     await runBlock(50)
     unStakeAmount = await devtContract.calcUnstakeAmount(2)

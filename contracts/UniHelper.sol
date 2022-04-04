@@ -28,28 +28,31 @@ contract UniHelper is ReentrancyGuard {
         UniswapV2Router01 = IUniswapV2Router01(_router1);
     }
 
-    function swapAdd(
+    function singleTokenAddLp(
         address pair,
         address inputToken,
-        uint256 amount
+        uint256 amount,
+        uint256 amountSwapOutMin,
+        uint256 deadline
     ) external nonReentrant returns (uint256) {
-        (address tokenA, address tokenB) = _checkToken(pair, inputToken);
-        SafeERC20.safeTransferFrom(IERC20(tokenA), msg.sender, address(this), amount);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pair).getReserves();
-        uint256 swapAmount = _getAmount(amount, 0, reserve0, reserve1);
+        (address tokenFrom, address tokenTo, bool fromIsToken0) = this.sortToken(pair, inputToken);
+        _addApprove(tokenFrom);
+        _addApprove(tokenTo);
+        SafeERC20.safeTransferFrom(IERC20(tokenFrom), msg.sender, address(this), amount);
+        uint256 swapAmount = this.getSwapAmount(pair, amount, fromIsToken0);
         address[] memory paths = new address[](2);
-        paths[0] = tokenA;
-        paths[1] = tokenB;
+        paths[0] = tokenFrom;
+        paths[1] = tokenTo;
         uint256[] memory amounts = UniswapV2Router01.swapExactTokensForTokens(
             swapAmount,
-            1,
+            amountSwapOutMin,
             paths,
             address(this),
-            block.timestamp
+            deadline
         );
         (uint256 amountA, uint256 amountB, uint256 lp) = UniswapV2Router01.addLiquidity(
-            tokenA,
-            tokenB,
+            tokenFrom,
+            tokenTo,
             swapAmount,
             amounts[1],
             1,
@@ -64,8 +67,8 @@ contract UniHelper is ReentrancyGuard {
         uint256 swapB;
         if (backB > 0) {
             address[] memory paths_ = new address[](2);
-            paths_[1] = tokenA;
-            paths_[0] = tokenB;
+            paths_[1] = tokenFrom;
+            paths_[0] = tokenTo;
             uint256[] memory amounts_ = UniswapV2Router01.swapExactTokensForTokens(
                 backB,
                 0,
@@ -75,27 +78,44 @@ contract UniHelper is ReentrancyGuard {
             );
             swapB = amounts_[1];
         }
-        uint256 b = IERC20(tokenA).balanceOf(address(this));
-        if (b > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, b);
+        uint256 b = IERC20(tokenFrom).balanceOf(address(this));
+        if (b > 0) SafeERC20.safeTransfer(IERC20(tokenFrom), msg.sender, b);
         emit SwapAdd(msg.sender, _amount, amounts[0], amounts[1], amountA, amountB, lp, backA, backB, swapB);
         return lp;
     }
 
-    function _checkToken(address pair, address inputToken) internal returns (address from, address to) {
+    function sortToken(address pair, address inputToken)
+        external
+        view
+        returns (
+            address from,
+            address to,
+            bool fromIsToken0
+        )
+    {
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
-        require(inputToken == token0 || inputToken == token1, 'SA: token not found');
-        _addApprove(token0);
-        _addApprove(token1);
-        address tokenA = token0 == inputToken ? token0 : token1;
-        address tokenB = token0 == inputToken ? token1 : token0;
-        return (tokenA, tokenB);
+        require(inputToken == token0 || inputToken == token1, 'UH: token not found');
+        address tokenFrom = token0 == inputToken ? token0 : token1;
+        address tokenTo = token0 == inputToken ? token1 : token0;
+        return (tokenFrom, tokenTo, tokenFrom == inputToken);
     }
 
     function _addApprove(address token) internal {
         if (IERC20(token).allowance(address(this), address(UniswapV2Router01)) == 0) {
             SafeERC20.safeApprove(IERC20(token), address(UniswapV2Router01), uint256(-1));
         }
+    }
+
+    function getSwapAmount(
+        address pair,
+        uint256 amount,
+        bool fromIsToken0
+    ) external view returns (uint256) {
+        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pair).getReserves();
+        uint256 amount0 = fromIsToken0 ? amount : 0;
+        uint256 amount1 = fromIsToken0 ? 0 : amount;
+        return _getAmount(amount0, amount1, reserve0, reserve1);
     }
 
     function _getAmount(

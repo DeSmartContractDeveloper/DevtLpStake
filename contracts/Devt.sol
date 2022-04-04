@@ -11,8 +11,9 @@ import '../libraries/UniswapV2LiquidityMathLibrary.sol';
 import './UniHelper.sol';
 import './interfaces/IOracle.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
+import '@openzeppelin/contracts/utils/Pausable.sol';
 
-contract Devt is Ownable, ReentrancyGuard, ERC721 {
+contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     Counters.Counter private _tokenIds;
@@ -43,10 +44,13 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
     address public stToken;
     address public stPair;
     bool public stIsToken0;
+    uint256 public available0Amount;
+    uint256 public available1Amount;
 
     mapping(uint256 => Strategy) public strategys;
     mapping(uint256 => ReleaseInfo) public relaseInfo;
 
+    event InjectToken(address from, uint256 amount0, uint256 amount1, uint256 syncAmount);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
     event SetPair(address pair, bool token0IsStableToken, bool enable, uint256 minLpAmount);
     event Stake(
@@ -87,9 +91,25 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
         emit StrategyUpdate(index, percent, duration);
     }
 
-    function setTOkenURI(uint256 tokenId, string calldata _tokenURI) external onlyOwner {
+    function setTokenURI(uint256 tokenId, string calldata _tokenURI) external onlyOwner {
         require(_exists(tokenId), 'ERC721URIStorage: URI set of nonexistent token');
         _tokenURIs[tokenId] = _tokenURI;
+    }
+
+    function setBaseURI(string calldata uri) external onlyOwner {
+        _setBaseURI(uri);
+    }
+
+    function injectToken(uint256 amount0, uint256 amount1) external onlyOwner {
+        SafeERC20.safeTransferFrom(IERC20(stToken), msg.sender, address(this), amount0.add(amount1));
+        available0Amount = available0Amount.add(amount0);
+        available1Amount = available1Amount.add(amount1);
+        uint256 stBalance = IERC20(stToken).balanceOf(address(this));
+        uint256 syncAmount = stBalance.sub(available0Amount).sub(available1Amount);
+        if (syncAmount > 0) {
+            SafeERC20.safeTransfer(IERC20(stToken), owner(), syncAmount);
+        }
+        emit InjectToken(msg.sender, amount0, amount1, syncAmount);
     }
 
     function setPair(
@@ -117,11 +137,16 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
         ReleaseInfo storage info = relaseInfo[tokenId];
         uint256 amount = calcUnstakeAmount(tokenId);
         require(amount > 0, 'ST: no token to unstake');
-        uint256 stBalance = IERC20(stToken).balanceOf(address(this));
-        require(stBalance >= amount, 'ST: no enough token to unstake');
-        info.relaseAmount = info.relaseAmount.add(amount);
-        SafeERC20.safeTransfer(IERC20(stToken), msg.sender, amount);
-        emit Unstake(msg.sender, tokenId, amount);
+        uint256 releaseAmount = amount;
+        if (info.index == 0) {
+            if (available0Amount < amount) {
+                releaseAmount = available0Amount;
+            }
+            available0Amount = available0Amount.sub(releaseAmount);
+        }
+        info.relaseAmount = info.relaseAmount.add(releaseAmount);
+        SafeERC20.safeTransfer(IERC20(stToken), msg.sender, releaseAmount);
+        emit Unstake(msg.sender, tokenId, releaseAmount);
     }
 
     function calcUnstakeAmount(uint256 tokenId) public view returns (uint256) {
@@ -149,8 +174,10 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
     function stakeToken(
         address pair,
         uint256 amount,
+        uint256 amountSwapOutMin,
+        uint256 deadline,
         uint256 s
-    ) external nonReentrant {
+    ) external nonReentrant whenNotPaused {
         require(amount >= pairMinTokenAmount[pair], 'ST: value must gt the min amount');
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
@@ -159,14 +186,14 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
         if (IERC20(tokenA).allowance(address(this), address(uniHelper)) == 0) {
             SafeERC20.safeApprove(IERC20(tokenA), address(uniHelper), uint256(-1));
         }
-        _stake(pair, uniHelper.swapAdd(pair, tokenA, amount), s);
+        _stake(pair, uniHelper.singleTokenAddLp(pair, tokenA, amount, amountSwapOutMin, deadline), s);
     }
 
     function stake(
         address pair,
         uint256 lp,
         uint256 s
-    ) public nonReentrant {
+    ) public nonReentrant whenNotPaused {
         require(lp >= pairMinLpAmount[pair], 'ST:lp value must gt the min amount');
         SafeERC20.safeTransferFrom(IERC20(pair), msg.sender, address(this), lp);
         _stake(pair, lp, s);
@@ -199,11 +226,22 @@ contract Devt is Ownable, ReentrancyGuard, ERC721 {
         value = value.mul(1e18); // for price enlarged 1e18, so the value alse enarge 1e18
         uint256 price = getStPrice().mul(strategy.percent).div(10000);
         uint256 amount = value.div(price);
+        if (s == 0) {
+            require(available0Amount > 0, 'ST: not available token0');
+        } else {
+            available1Amount = available1Amount.sub(amount);
+            require(available1Amount > 0, 'ST: not available token1');
+        }
+        uint256 tokenId = _mintToken();
+        relaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount, value, 0, block.timestamp);
+        emit Stake(msg.sender, pair, s, lp, tokenId, amount, value, price);
+    }
+
+    function _mintToken() internal returns (uint256) {
         _tokenIds.increment();
         uint256 tokenId = _tokenIds.current();
         _mint(msg.sender, tokenId);
-        relaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount, value, 0, block.timestamp);
-        emit Stake(msg.sender, pair, s, lp, tokenId, amount, value, price);
+        return tokenId;
     }
 
     function getStPrice() internal view returns (uint256) {
