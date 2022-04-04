@@ -38,38 +38,23 @@ describe('Test stake lp and back to st token ', async () => {
     stToken = stToken.connect(wallet)
     let daiToken = await deployContract(wallet, ERC20Me, ['dai', 'dai'])
     daiToken = daiToken.connect(wallet)
-    let ljToken = await deployContract(wallet, ERC20Me, ['lj', 'lj'])
-    ljToken = ljToken.connect(wallet)
+
     console.log({
       st: stToken.address,
-      dai: daiToken.address,
-      ljToken: ljToken.address
+      dai: daiToken.address
     })
     const factory = await deployContract(wallet, UniswapV2Factory, [wallet.address])
     let UniswapV2Router01 = await deployContract(wallet, UniswapV2Router01Json, [factory.address, weth9.address])
     await stToken.approve(UniswapV2Router01.address, bigNum)
     await daiToken.approve(UniswapV2Router01.address, bigNum)
     let UniHelper = await deployContract(wallet, UniHelperJson, [UniswapV2Router01.address])
-
-    await factory.createPair(daiToken.address, ljToken.address)
-    const ljPairAddr = await factory.getPair(daiToken.address, ljToken.address)
-    const ljPair = new Contract(ljPairAddr, JSON.stringify(UniswapV2Pair.abi), provider)
-    let token0Address = await ljPair.token0()
-
-    console.log('ljPair token0 address ', token0Address)
-
     const token0Amount = expandTo18Decimals(100)
     const token1Amount = expandTo18Decimals(10)
-    // // add lp
-    await daiToken.transfer(ljPair.address, token0Amount)
-    await ljToken.transfer(ljPair.address, token1Amount)
-    await ljPair.connect(wallet).mint(wallet.address, overrides)
-
     await factory.createPair(daiToken.address, stToken.address)
     const stPairAddr = await factory.getPair(daiToken.address, stToken.address)
     const stPair = new Contract(stPairAddr, JSON.stringify(UniswapV2Pair.abi), provider)
-    token0Address = await stPair.token0()
-    console.log('stPair token0 address ', token0Address)
+    let stPairToken0 = await stPair.token0()
+    console.log('stPair token0 address ', stPairToken0)
     // add lp
     await daiToken.transfer(stPair.address, token0Amount)
     await stToken.transfer(stPair.address, token1Amount)
@@ -77,7 +62,6 @@ describe('Test stake lp and back to st token ', async () => {
     let oracle = await deployContract(wallet, OracleJson)
     oracle = oracle.connect(wallet)
     await oracle.addPair(stPair.address, 300) // set update windows is 5 minutes
-    await oracle.addPair(ljPair.address, 300)
     let blockTimestamp = (await stPair.getReserves())[2]
     console.log('current block ts ', blockTimestamp)
     await provider.send('evm_mine', [blockTimestamp + 60 * 6])
@@ -93,36 +77,33 @@ describe('Test stake lp and back to st token ', async () => {
         stPair.address,
         oracle.address,
         UniHelper.address,
-        true // st token in st-dai pair is the token0
+        stToken.address.toLowerCase() === stPairToken0.toLowerCase()
       ],
       overrides
     )
-    console.log('injectToken')
-    await stToken.approve(devtContract.address, bigNum)
-    await devtContract.injectToken(BigNumber.from(bigNum).div(2), BigNumber.from(bigNum).div(2))
-    devtContract = devtContract.connect(wallet)
+    console.log('tranfer rewards token to contract')
+    await stToken.transfer(devtContract.address, bigNum)
+    await devtContract.setLimitValue(bigNum, bigNum)
     await devtContract.setPair(
-      ljPair.address,
-      false, // at lj-dai pair, dai is  token0
+      stPair.address,
+      daiToken.address.toLowerCase() === stPairToken0.toLowerCase(),
       true, // enable this pair
       expandTo18Decimals(10),
       expandTo18Decimals(1)
     )
-    await ljPair.connect(wallet).approve(devtContract.address, bigNum)
 
-    const lpBalance = await ljPair.balanceOf(wallet.address)
+    await stPair.connect(wallet).approve(devtContract.address, bigNum)
+    const lpBalance = await stPair.balanceOf(wallet.address)
     console.log('lp balance is ', lpBalance.toString())
-    await devtContract.stake(ljPair.address, BigNumber.from(lpBalance).div(2), 1)
+    await devtContract.stake(stPair.address, BigNumber.from(lpBalance).div(2), 1)
     let b = await provider.getBlockNumber()
-    console.log('stake block is ', b)
     let blockInfo = await provider.getBlock(b)
-    console.log('--stake block ts--', blockInfo.timestamp)
+    console.log('--stake block ts--', blockInfo.timestamp, ' block is ', b)
     deadTs = blockInfo.timestamp * 2
     await runBlock(50)
     b = await provider.getBlockNumber()
     blockInfo = await provider.getBlock(b)
-    console.log('after runing some time block ts--', blockInfo.timestamp)
-    console.log('after runing some time  block is ', b)
+    console.log('after runing some time block ts--', blockInfo.timestamp, ' block is ', b)
     let balance = await stToken.balanceOf(wallet.address)
     console.log('bBefeore ', balance.toString())
 
@@ -135,7 +116,7 @@ describe('Test stake lp and back to st token ', async () => {
     console.log('stake dai')
     await daiToken.approve(devtContract.address, expandTo18Decimals(100000000000))
     let stakeResult = await (
-      await devtContract.stakeToken(ljPair.address, expandTo18Decimals(10000), 1, deadTs, 1, overrides)
+      await devtContract.stakeToken(stPair.address, expandTo18Decimals(10000), 1, deadTs, 1, overrides)
     ).wait()
     console.log('stake result ', stakeResult)
     await runBlock(50)
