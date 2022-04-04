@@ -10,7 +10,6 @@ import OracleJson from '../build/Oracle.json'
 import DevtJson from '../build/Devt.json'
 import UniswapV2Router01Json from '../build/UniswapV2Router01.json'
 import WETH9Json from '../build/WETH9.json'
-import UniHelperJson from '../build/UniHelper.json'
 const overrides = {
   gasLimit: 9999999
 }
@@ -47,7 +46,6 @@ describe('Test stake lp and back to st token ', async () => {
     let UniswapV2Router01 = await deployContract(wallet, UniswapV2Router01Json, [factory.address, weth9.address])
     await stToken.approve(UniswapV2Router01.address, bigNum)
     await daiToken.approve(UniswapV2Router01.address, bigNum)
-    let UniHelper = await deployContract(wallet, UniHelperJson, [UniswapV2Router01.address])
     const token0Amount = expandTo18Decimals(100)
     const token1Amount = expandTo18Decimals(10)
     await factory.createPair(daiToken.address, stToken.address)
@@ -76,7 +74,7 @@ describe('Test stake lp and back to st token ', async () => {
         stToken.address,
         stPair.address,
         oracle.address,
-        UniHelper.address,
+        UniswapV2Router01.address,
         stToken.address.toLowerCase() === stPairToken0.toLowerCase()
       ],
       overrides

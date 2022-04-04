@@ -71,14 +71,14 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         address _stToken,
         address _stPair,
         address _oracle,
-        address _uniHelper,
+        address _router,
         bool _stIsToken0
     ) public ERC721('Devt ST', 'DST') {
         stToken = _stToken;
         stPair = _stPair;
         stIsToken0 = _stIsToken0;
         Oracle = IOracle(_oracle);
-        uniHelper = UniHelper(_uniHelper);
+        uniHelper = new UniHelper(_router);
         strategys[0] = Strategy(7000, 7 * 7 days); // one main strategy , the rest is another main strategy
         strategys[1] = Strategy(9000, 1 * 7 days);
         strategys[2] = Strategy(8800, 2 * 7 days);
