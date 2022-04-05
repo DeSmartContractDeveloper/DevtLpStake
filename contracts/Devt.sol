@@ -103,6 +103,13 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         emit SetLimitValue(limitStakeToken, limitStakeLp);
     }
 
+    function withdrawExtraToken() external onlyOwner {
+        uint256 stBalance = IERC20(stToken).balanceOf(address(this));
+        if (stBalance > 0) {
+            SafeERC20.safeTransfer(IERC20(stToken), msg.sender, stBalance);
+        }
+    }
+
     function setPair(
         address pair,
         bool _token0IsStableToken,
