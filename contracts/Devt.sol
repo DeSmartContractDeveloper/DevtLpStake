@@ -150,6 +150,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             require(info.releaseAmount < info.amount, 'ST: release finish');
             uint256 remainAmount = info.amount.sub(info.releaseAmount);
             amount = info.amount.div(strategys[info.index].duration).mul((block.timestamp.sub(info.startTs)));
+            amount = amount.sub(info.releaseAmount);
             if (amount > remainAmount) amount = remainAmount;
         } else {
             require(info.releaseAmount == 0, 'ST: relased finish 2');
