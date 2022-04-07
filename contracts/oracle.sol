@@ -4,8 +4,8 @@ pragma experimental ABIEncoderV2;
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import '@uniswap/lib/contracts/libraries/FixedPoint.sol';
-import '../libraries/UniswapV2OracleLibrary.sol';
-import '../libraries/UniswapV2Library.sol';
+import './libraries/UniswapV2OracleLibrary.sol';
+import './libraries/UniswapV2Library.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 contract Oracle is Ownable {

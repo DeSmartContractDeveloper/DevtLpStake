@@ -7,7 +7,7 @@ import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
-import '../libraries/UniswapV2LiquidityMathLibrary.sol';
+import './libraries/UniswapV2LiquidityMathLibrary.sol';
 import './UniHelper.sol';
 import './interfaces/IOracle.sol';
 import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';

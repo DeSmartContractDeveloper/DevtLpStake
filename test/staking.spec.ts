@@ -100,7 +100,7 @@ describe('Test stake lp and back to st token ', async () => {
     let blockInfo = await provider.getBlock(b)
     console.log('--stake block ts--', blockInfo.timestamp, ' block is ', b)
     deadTs = blockInfo.timestamp * 2
-    await runBlock(50)
+    await runBlock(100)
     b = await provider.getBlockNumber()
     blockInfo = await provider.getBlock(b)
     console.log('after runing some time block ts--', blockInfo.timestamp, ' block is ', b)
@@ -119,7 +119,7 @@ describe('Test stake lp and back to st token ', async () => {
       await devtContract.stakeToken(stPair.address, expandTo18Decimals(10000), 1, deadTs, 1, overrides)
     ).wait()
     console.log('stake result ', stakeResult)
-    await runBlock(50)
+    await runBlock(100)
     unStakeAmount = await devtContract.calcUnstakeAmount(2)
     console.log('unstak amount is ', unStakeAmount.toString())
     balance = await stToken.balanceOf(wallet.address)
