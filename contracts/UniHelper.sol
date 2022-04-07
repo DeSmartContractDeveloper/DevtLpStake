@@ -20,8 +20,7 @@ contract UniHelper is ReentrancyGuard {
         uint256 addB,
         uint256 lp,
         uint256 backA,
-        uint256 backB,
-        uint256 swapB
+        uint256 backB
     );
 
     constructor(address _router1) public {
@@ -34,7 +33,7 @@ contract UniHelper is ReentrancyGuard {
         uint256 amount,
         uint256 amountSwapOutMin,
         uint256 deadline
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant returns (uint256,uint256,uint256) {
         (address tokenFrom, address tokenTo, bool fromIsToken0) = this.sortToken(pair, inputToken);
         _addApprove(tokenFrom);
         _addApprove(tokenTo);
@@ -50,39 +49,26 @@ contract UniHelper is ReentrancyGuard {
             address(this),
             deadline
         );
+        uint256 _amount = amount;
         (uint256 amountA, uint256 amountB, uint256 lp) = UniswapV2Router01.addLiquidity(
             tokenFrom,
             tokenTo,
-            swapAmount,
+            _amount.sub(amounts[0]),
             amounts[1],
-            1,
-            1,
+            _amount.sub(amounts[0]).mul(90).div(100),
+            amounts[1].mul(90).div(100),
             msg.sender,
             block.timestamp
         );
-        uint256 _amount = amount;
         require(lp > 0, 'SA: add lp error');
-        uint256 backA = _amount.sub(amounts[0]).sub(amountA);
-        uint256 backB = amounts[1].sub(amountB);
-        uint256 swapB;
-        if (backB > 0) {
-            address[] memory paths_ = new address[](2);
-            paths_[1] = tokenFrom;
-            paths_[0] = tokenTo;
-            uint256[] memory amounts_ = UniswapV2Router01.swapExactTokensForTokens(
-                backB,
-                0,
-                paths_,
-                address(this),
-                block.timestamp
-            );
-            swapB = amounts_[1];
-        }
-        uint256 b = IERC20(tokenFrom).balanceOf(address(this));
-        if (b > 0) SafeERC20.safeTransfer(IERC20(tokenFrom), msg.sender, b);
-        emit SwapAdd(msg.sender, _amount, amounts[0], amounts[1], amountA, amountB, lp, backA, backB, swapB);
-        return lp;
+        uint256 fromBal = IERC20(tokenFrom).balanceOf(address(this));
+        if (fromBal > 0) SafeERC20.safeTransfer(IERC20(tokenFrom), msg.sender, fromBal);
+        uint256 toBal = IERC20(tokenTo).balanceOf(address(this));
+        if (toBal > 0) SafeERC20.safeTransfer(IERC20(tokenTo), msg.sender, toBal);
+        emit SwapAdd(msg.sender, _amount, amounts[0], amounts[1], amountA, amountB, lp, fromBal, toBal);
+        return (lp, fromBal, toBal);
     }
+
 
     function sortToken(address pair, address inputToken)
         external

@@ -190,11 +190,15 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
         address tokenA = pairToken0IsStableToken[pair] ? token0 : token1;
+        address tokenB = pairToken0IsStableToken[pair] ? token1 : token0;
         SafeERC20.safeTransferFrom(IERC20(tokenA), msg.sender, address(this), amount);
         if (IERC20(tokenA).allowance(address(this), address(uniHelper)) == 0) {
             SafeERC20.safeApprove(IERC20(tokenA), address(uniHelper), uint256(-1));
         }
-        _stake(pair, uniHelper.singleTokenAddLp(pair, tokenA, amount, amountSwapOutMin, deadline), s);
+        (uint256 lp,uint256 amountA,uint256 amountB) = uniHelper.singleTokenAddLp(pair, tokenA, amount, amountSwapOutMin, deadline);
+        _stake(pair, lp, s);
+        if(amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
+        if(amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
     }
 
     function stake(
