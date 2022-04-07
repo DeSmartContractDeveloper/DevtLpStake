@@ -208,7 +208,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     ) public nonReentrant whenNotPaused {
         require(pairEnable[pair] == true, 'ST: pair not enable');
         require(lp >= pairMinLpAmount[pair], 'ST:lp value must gt the min amount');
-        require(lp <= pairMaxLpAmount[pair], 'ST:lp value must lt the min amount');
+        require(lp <= pairMaxLpAmount[pair], 'ST:lp value must lt the max amount');
         require(stakedLp.add(lp) <= limitStakeLp, 'ST: overflow limit value');
         stakedLp = stakedLp.add(lp);
         SafeERC20.safeTransferFrom(IERC20(pair), msg.sender, address(this), lp);
