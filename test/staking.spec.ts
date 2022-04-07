@@ -28,6 +28,12 @@ describe('Test stake lp and back to st token ', async () => {
       await provider.send('evm_mine', [])
     }
   }
+
+  async function runTime(time: number = 5) {
+    let b = await provider.getBlockNumber()
+    let blockInfo = await provider.getBlock(b)
+    await provider.send('evm_mine', [blockInfo.timestamp + time])
+  }
   let deadTs = 0
 
   it('test staking and unstake', async () => {
@@ -89,7 +95,7 @@ describe('Test stake lp and back to st token ', async () => {
       expandTo18Decimals(1),
       expandTo18Decimals(1),
       expandTo18Decimals(10000),
-      expandTo18Decimals(10000),
+      expandTo18Decimals(10000)
     )
 
     await stPair.connect(wallet).approve(devtContract.address, bigNum)
@@ -100,7 +106,7 @@ describe('Test stake lp and back to st token ', async () => {
     let blockInfo = await provider.getBlock(b)
     console.log('--stake block ts--', blockInfo.timestamp, ' block is ', b)
     deadTs = blockInfo.timestamp * 2
-    await runBlock(100)
+    await runTime(10)
     b = await provider.getBlockNumber()
     blockInfo = await provider.getBlock(b)
     console.log('after runing some time block ts--', blockInfo.timestamp, ' block is ', b)
@@ -118,8 +124,8 @@ describe('Test stake lp and back to st token ', async () => {
     let stakeResult = await (
       await devtContract.stakeToken(stPair.address, expandTo18Decimals(10000), 1, deadTs, 1, overrides)
     ).wait()
-    console.log('stake result ', stakeResult)
-    await runBlock(100)
+    console.log('stake result ', stakeResult.transactionHash)
+    await runTime(10)
     unStakeAmount = await devtContract.calcUnstakeAmount(2)
     console.log('unstak amount is ', unStakeAmount.toString())
     balance = await stToken.balanceOf(wallet.address)
