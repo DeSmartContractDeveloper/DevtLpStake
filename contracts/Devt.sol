@@ -65,9 +65,9 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 strategy,
         uint256 lp,
         uint256 tokenId,
+        uint256 amount,
         uint256 amount0,
         uint256 amount1,
-        uint256 amount,
         uint256 value,
         uint256 price
     );
@@ -239,8 +239,8 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 price = getStPrice().mul(strategy.percent).div(10000);
         uint256 amount = value.div(price);
         uint256 tokenId = _mintToken();
-        releaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount,amount0,amount1, value, 0, block.timestamp);
-        emit Stake(msg.sender, pair, s, lp, tokenId, amount,amount0,amount1, value, price);
+        releaseInfo[tokenId] = ReleaseInfo(msg.sender, s, amount, amount0, amount1, value, 0, block.timestamp);
+        emit Stake(msg.sender, pair, s, lp, tokenId, amount, amount0, amount1, value, price);
     }
 
     function _mintToken() internal returns (uint256) {
