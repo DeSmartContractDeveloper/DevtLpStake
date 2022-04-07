@@ -17,7 +17,6 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     Counters.Counter private _tokenIds;
-    mapping(uint256 => string) private _tokenURIs;
 
     struct ReleaseInfo {
         address maker;
@@ -32,12 +31,15 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 percent;
         uint256 duration;
     }
-
+    /***************pair config start**************************/
     mapping(address => bool) public pairToken0IsStableToken;
     mapping(address => bool) public pairEnable;
     mapping(address => uint256) public pairMinLpAmount;
     mapping(address => uint256) public pairMinTokenAmount;
-
+    mapping(address => uint256) public pairMaxLpAmount;
+    mapping(address => uint256) public pairMaxTokenAmount;
+    /***************pair config end**************************/
+    
     IOracle public Oracle;
     UniHelper public uniHelper;
 
@@ -54,7 +56,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     event SetLimitValue(uint256 token, uint256 lp);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
-    event SetPair(address pair, bool token0IsStableToken, bool enable, uint256 minLpAmount);
+    event SetPair(address pair, bool token0IsStableToken, bool enable, uint256 minLpAmount,uint256 maxLpAmount,uint256 minTokenAmount,uint256 maxTokenAmount);
     event Stake(
         address player,
         address pair,
@@ -115,13 +117,17 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         bool _token0IsStableToken,
         bool enable,
         uint256 minLpAmount,
-        uint256 minTokenAmount
+        uint256 minTokenAmount,
+        uint256 maxLpAmount,
+        uint256 maxTokenAmount
     ) external onlyOwner {
         pairToken0IsStableToken[pair] = _token0IsStableToken;
         pairEnable[pair] = enable;
         pairMinLpAmount[pair] = minLpAmount;
         pairMinTokenAmount[pair] = minTokenAmount;
-        emit SetPair(pair, _token0IsStableToken, enable, minLpAmount);
+        pairMaxLpAmount[pair] = maxLpAmount;
+        pairMaxTokenAmount[pair] = maxTokenAmount;
+        emit SetPair(pair, _token0IsStableToken, enable, minLpAmount,maxLpAmount,minTokenAmount,maxTokenAmount);
     }
 
     function batchUnstake(uint256[] calldata tokens) external {
@@ -172,9 +178,11 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 deadline,
         uint256 s
     ) external nonReentrant whenNotPaused {
+        require(pairEnable[pair] == true, 'ST: pair not enable');
+        require(amount >= pairMinTokenAmount[pair], 'ST: token value must gt the min amount');
+        require(amount <= pairMaxTokenAmount[pair], 'ST: token value must lt the max amount');
         require(stakedToken.add(amount) <= limitStakeToken, 'ST: overflow limit value');
         stakedToken = stakedToken.add(amount);
-        require(amount >= pairMinTokenAmount[pair], 'ST: value must gt the min amount');
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
         address tokenA = pairToken0IsStableToken[pair] ? token0 : token1;
@@ -190,7 +198,9 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 lp,
         uint256 s
     ) public nonReentrant whenNotPaused {
+        require(pairEnable[pair] == true, 'ST: pair not enable');
         require(lp >= pairMinLpAmount[pair], 'ST:lp value must gt the min amount');
+        require(lp <= pairMaxLpAmount[pair], 'ST:lp value must lt the min amount');
         require(stakedLp.add(lp) <= limitStakeLp, 'ST: overflow limit value');
         stakedLp = stakedLp.add(lp);
         SafeERC20.safeTransferFrom(IERC20(pair), msg.sender, address(this), lp);
@@ -204,7 +214,6 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     ) internal {
         Strategy storage strategy = strategys[s];
         require(strategy.duration > 0 && strategy.percent > 0, 'ST:strategy not found ');
-        require(pairEnable[pair] == true, 'ST: pair not enable');
         uint256 value = 0;
         (uint256 amount0, uint256 amount1) = UniswapV2LiquidityMathLibrary.getLiquidityValue(
             IUniswapV2Pair(pair).factory(),

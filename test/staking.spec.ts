@@ -86,8 +86,10 @@ describe('Test stake lp and back to st token ', async () => {
       stPair.address,
       daiToken.address.toLowerCase() === stPairToken0.toLowerCase(),
       true, // enable this pair
-      expandTo18Decimals(10),
-      expandTo18Decimals(1)
+      expandTo18Decimals(1),
+      expandTo18Decimals(1),
+      expandTo18Decimals(10000),
+      expandTo18Decimals(10000),
     )
 
     await stPair.connect(wallet).approve(devtContract.address, bigNum)
