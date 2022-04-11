@@ -52,6 +52,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     uint256 public limitStakeLp;
     uint256 public stakedToken;
     uint256 public stakedLp;
+    uint256 public releasedAmount;
 
     mapping(uint256 => Strategy) public strategys;
     mapping(uint256 => ReleaseInfo) public releaseInfo;
@@ -148,6 +149,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 stBalance = IERC20(stToken).balanceOf(address(this));
         require(stBalance >= amount, 'ST: no enough token to unstake');
         info.releaseAmount = info.releaseAmount.add(amount);
+        releasedAmount = releasedAmount.add(amount);
         SafeERC20.safeTransfer(IERC20(stToken), msg.sender, amount);
         emit Unstake(msg.sender, tokenId, amount);
     }
