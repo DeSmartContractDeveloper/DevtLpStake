@@ -34,6 +34,7 @@ contract Oracle is Ownable {
         _pair.isManual = true;
         _pair.price0Average = FixedPoint.encode(price0);
         _pair.price1Average = FixedPoint.fraction(1, price0);
+        _pair.blockTimestampLast = uint32(block.timestamp);
         log(pair);
     }
 
