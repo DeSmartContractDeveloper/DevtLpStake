@@ -60,7 +60,7 @@ contract Oracle is Ownable {
 
     function update(address pair) external {
         Pair storage _pair = pairs[pair];
-        require(_pair.isManual == false,"Oracle: parice update by manual");
+        require(_pair.isManual == false,"Oracle: price update by manual");
         require(_pair.token0 != address(0) || _pair.token1 != address(0), 'Oracle: not support pair');
         if (_pair.blockTimestampLast + _pair.period > block.timestamp) return;
         (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) = UniswapV2OracleLibrary
