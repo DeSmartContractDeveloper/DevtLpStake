@@ -84,7 +84,7 @@ contract UniHelper is ReentrancyGuard {
         require(inputToken == token0 || inputToken == token1, 'UH: token not found');
         address tokenFrom = token0 == inputToken ? token0 : token1;
         address tokenTo = token0 == inputToken ? token1 : token0;
-        return (tokenFrom, tokenTo, tokenFrom == inputToken);
+        return (tokenFrom, tokenTo, token0 == inputToken);
     }
 
     function _addApprove(address token) internal {
@@ -99,9 +99,9 @@ contract UniHelper is ReentrancyGuard {
         bool fromIsToken0
     ) external view returns (uint256) {
         (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pair).getReserves();
-        uint256 amount0 = fromIsToken0 ? amount : 0;
-        uint256 amount1 = fromIsToken0 ? 0 : amount;
-        return _getAmount(amount0, amount1, reserve0, reserve1);
+        uint256 r0 = fromIsToken0 ? reserve0 : reserve1;
+        uint256 r1 = fromIsToken0 ? reserve1 : reserve0;
+        return _getAmount(amount, 0, r0, r1);
     }
 
     function _getAmount(
