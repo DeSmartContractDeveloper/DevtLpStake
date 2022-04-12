@@ -181,14 +181,11 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             amount = amount.sub(info.releaseAmount);
             if (amount > remainAmount) amount = remainAmount;
         } else {
-            require(info.releaseAmount == 0, 'ST: relased finish 2');
-            require(
-                block.timestamp >= strategys[info.index].duration + info.startTs &&
-                    block.timestamp <= strategys[info.index].duration + info.startTs + 1 days,
-                'ST: time error'
-            );
-            uint256 price = getStPrice().mul(strategys[info.index].percent).div(10000);
-            amount = info.value.div(price);
+            uint256 endTs = strategys[info.index].duration + info.startTs;
+            if (block.timestamp >= endTs && block.timestamp <= (endTs + 1 days) && info.releaseAmount == 0) {
+                uint256 price = getStPrice().mul(strategys[info.index].percent).div(10000);
+                amount = info.value.div(price);
+            }
         }
         return amount;
     }
