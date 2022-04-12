@@ -89,7 +89,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         address _router,
         bool _stIsToken0
     ) public ERC721('Devt ST', 'DST') {
-        require(address(0) != _stStoken, 'set stToken to the zero address.');
+        require(address(0) != _stToken, 'set stToken to the zero address.');
         require(address(0) != _stPair, 'set stPair to the zero address.');
         require(address(0) != _oracle, 'set Oracle to the zero address.');
         require(address(0) != _router, 'set router to the zero address.');
