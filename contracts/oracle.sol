@@ -101,7 +101,7 @@ contract Oracle is Ownable {
             require(token == _pair.token1, 'Oracle: INVALID_TOKEN');
             amountOut = _pair.price1Average.mul(amountIn).decode144();
         }
-        if (block.timestamp - _pair.blockTimestampLast <= _pair.period) {
+        if (block.timestamp - _pair.blockTimestampLast <= _pair.period * 2) {
             effect = true;
         } else {
             effect = false;
