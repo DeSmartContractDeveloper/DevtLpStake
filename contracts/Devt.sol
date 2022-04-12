@@ -133,6 +133,10 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         }
     }
 
+    function getCurrNFTCount() external {
+        return _tokenIds.current();
+    }
+
     function setPair(
         address pair,
         bool _token0IsStableToken,
