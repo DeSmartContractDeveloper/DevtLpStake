@@ -98,9 +98,9 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         stIsToken0 = _stIsToken0;
         Oracle = IOracle(_oracle);
         uniHelper = new UniHelper(_router);
-        strategys[0] = Strategy(7000, 7 * 7 days); // one main strategy , the rest is another main strategy
-        strategys[1] = Strategy(9000, 1 * 7 days);
-        strategys[2] = Strategy(8800, 2 * 7 days);
+        strategys[0] = Strategy(7000, 7 * 7 minutes); // one main strategy , the rest is another main strategy
+        strategys[1] = Strategy(9000, 1 * 7 minutes);
+        strategys[2] = Strategy(8800, 2 * 7 minutes);
     }
 
     function updateStrategy(
@@ -278,7 +278,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         return tokenId;
     }
 
-    function getStPrice() internal view returns (uint256) {
+    function getStPrice() public view returns (uint256) {
         (uint256 token0Price, uint256 token1Price) = Oracle.tokenPirceWith18(stPair);
         uint256 price = stIsToken0 ? token0Price : token1Price;
         require(price > 0, 'ST:price is zero');
