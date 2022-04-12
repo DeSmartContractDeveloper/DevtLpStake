@@ -31,6 +31,7 @@ contract Oracle is Ownable {
 
     function setPairPrice(address pair, uint112 price0) external onlyOwner {
         Pair storage _pair = pairs[pair];
+        require(_pair.token0 != address(0) && _pair.token1 != address(0), 'Oracle: pair not add');
         _pair.isManual = true;
         _pair.price0Average = FixedPoint.encode(price0);
         _pair.price1Average = FixedPoint.fraction(1, price0);
@@ -40,7 +41,7 @@ contract Oracle is Ownable {
 
     function addPair(address pair, uint256 period) external onlyOwner {
         Pair storage _pair_ = pairs[pair];
-        require(_pair_.token0 == address(0) && _pair_.token1 == address(0), 'Oracle: pair have been add');
+        require(_pair_.token0 == address(0) || _pair_.token1 == address(0), 'Oracle: pair have been add');
         IUniswapV2Pair _pair = IUniswapV2Pair(pair);
         (uint256 reserve0, uint256 reserve1, uint32 _ts) = _pair.getReserves();
         require(reserve0 != 0 && reserve1 != 0, 'Oracle: NO_RESERVES');

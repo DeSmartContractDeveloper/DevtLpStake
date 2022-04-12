@@ -42,12 +42,12 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     mapping(address => uint256) public pairMaxTokenAmount;
     /***************pair config end**************************/
 
-    IOracle public Oracle;
-    UniHelper public uniHelper;
+    IOracle public immutable Oracle;
+    UniHelper public immutable uniHelper;
+    address public immutable stToken;
+    address public immutable stPair;
+    bool public immutable stIsToken0;
 
-    address public stToken;
-    address public stPair;
-    bool public stIsToken0;
     uint256 public limitStakeToken;
     uint256 public limitStakeLp;
     uint256 public stakedToken;
@@ -59,7 +59,15 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     event SetLimitValue(uint256 token, uint256 lp);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
-    event SetPair(address pair, bool token0IsStableToken, bool enable, uint256 minLpAmount,uint256 maxLpAmount,uint256 minTokenAmount,uint256 maxTokenAmount);
+    event SetPair(
+        address pair,
+        bool token0IsStableToken,
+        bool enable,
+        uint256 minLpAmount,
+        uint256 maxLpAmount,
+        uint256 minTokenAmount,
+        uint256 maxTokenAmount
+    );
     event Stake(
         address player,
         address pair,
@@ -100,6 +108,10 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         emit StrategyUpdate(index, percent, duration);
     }
 
+    function switchSelfEnable() external onlyOwner {
+        paused() ? _unpause() : _pause();
+    }
+
     function setBaseURI(string calldata uri) external onlyOwner {
         _setBaseURI(uri);
     }
@@ -132,7 +144,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         pairMinTokenAmount[pair] = minTokenAmount;
         pairMaxLpAmount[pair] = maxLpAmount;
         pairMaxTokenAmount[pair] = maxTokenAmount;
-        emit SetPair(pair, _token0IsStableToken, enable, minLpAmount,maxLpAmount,minTokenAmount,maxTokenAmount);
+        emit SetPair(pair, _token0IsStableToken, enable, minLpAmount, maxLpAmount, minTokenAmount, maxTokenAmount);
     }
 
     function batchUnstake(uint256[] calldata tokens) external {
@@ -197,10 +209,16 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         if (IERC20(tokenA).allowance(address(this), address(uniHelper)) == 0) {
             SafeERC20.safeApprove(IERC20(tokenA), address(uniHelper), uint256(-1));
         }
-        (uint256 lp,uint256 amountA,uint256 amountB) = uniHelper.singleTokenAddLp(pair, tokenA, amount, amountSwapOutMin, deadline);
+        (uint256 lp, uint256 amountA, uint256 amountB) = uniHelper.singleTokenAddLp(
+            pair,
+            tokenA,
+            amount,
+            amountSwapOutMin,
+            deadline
+        );
         _stake(pair, lp, s);
-        if(amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
-        if(amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
+        if (amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
+        if (amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
     }
 
     function stake(
