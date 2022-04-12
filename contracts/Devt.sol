@@ -112,7 +112,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         emit StrategyUpdate(index, percent, duration);
     }
 
-    function switchSelfEnable() external onlyOwner {
+    function switchStakeEnable() external onlyOwner {
         paused() ? _unpause() : _pause();
     }
 
