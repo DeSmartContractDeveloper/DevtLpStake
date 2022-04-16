@@ -29,12 +29,16 @@ contract Oracle is Ownable {
     event PairAdd(address pair, uint256 period);
     event PairPriceSync(address pair, uint256 price0With18, uint256 price1With18);
 
-    function setPairPrice(address pair, uint112 price0) external onlyOwner {
+    function setPairPrice(
+        address pair,
+        uint112 a0,
+        uint112 a1
+    ) external onlyOwner {
         Pair storage _pair = pairs[pair];
         require(_pair.token0 != address(0) && _pair.token1 != address(0), 'Oracle: pair not add');
         _pair.isManual = true;
-        _pair.price0Average = FixedPoint.encode(price0);
-        _pair.price1Average = FixedPoint.fraction(1, price0);
+        _pair.price0Average = FixedPoint.fraction(a1, a0);
+        _pair.price1Average = FixedPoint.fraction(a0, a1);
         _pair.blockTimestampLast = uint32(block.timestamp);
         log(pair);
     }
@@ -62,11 +66,11 @@ contract Oracle is Ownable {
 
     function update(address pair) external {
         Pair storage _pair = pairs[pair];
-        require(_pair.isManual == false,"Oracle: price update by manual");
+        require(_pair.isManual == false, 'Oracle: price update by manual');
         require(_pair.token0 != address(0) || _pair.token1 != address(0), 'Oracle: not support pair');
         if (_pair.blockTimestampLast + _pair.period > block.timestamp) return;
         (uint256 price0Cumulative, uint256 price1Cumulative, uint32 blockTimestamp) = UniswapV2OracleLibrary
-        .currentCumulativePrices(address(pair));
+            .currentCumulativePrices(address(pair));
         uint32 timeElapsed = blockTimestamp - _pair.blockTimestampLast;
         _pair.price0Average = FixedPoint.uq112x112(
             uint224((price0Cumulative - _pair.price0CumulativeLast) / timeElapsed)
