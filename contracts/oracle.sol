@@ -31,14 +31,14 @@ contract Oracle is Ownable {
 
     function setPairPrice(
         address pair,
-        uint112 a0,
-        uint112 a1
+        uint112 price0Numerator,
+        uint112 price0Denominator
     ) external onlyOwner {
         Pair storage _pair = pairs[pair];
         require(_pair.token0 != address(0) && _pair.token1 != address(0), 'Oracle: pair not add');
         _pair.isManual = true;
-        _pair.price0Average = FixedPoint.fraction(a1, a0);
-        _pair.price1Average = FixedPoint.fraction(a0, a1);
+        _pair.price0Average = FixedPoint.fraction(price0Numerator, price0Denominator);
+        _pair.price1Average = FixedPoint.fraction(price0Denominator, price0Numerator);
         _pair.blockTimestampLast = uint32(block.timestamp);
         log(pair);
     }
