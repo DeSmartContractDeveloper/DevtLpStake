@@ -135,6 +135,15 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         }
     }
 
+    function getLpAmount(address pair, uint256 lp) external view returns (uint256 amount0, uint256 amount1) {
+        (amount0, amount1) = UniswapV2LiquidityMathLibrary.getLiquidityValue(
+            IUniswapV2Pair(pair).factory(),
+            IUniswapV2Pair(pair).token0(),
+            IUniswapV2Pair(pair).token1(),
+            lp
+        );
+    }
+
     function getCurrNFTCount() external view returns (uint256) {
         return _tokenIds.current();
     }
@@ -159,12 +168,13 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     function batchUnstake(uint256[] calldata tokens) external {
         for (uint256 index = 0; index < tokens.length; index++) {
+            require(ownerOf(tokens[index]) == msg.sender, 'ST: token owner error bath unstake');
             this.unstake(tokens[index]);
         }
     }
 
-    function unstake(uint256 tokenId) external nonReentrant {
-        require(ownerOf(tokenId) == msg.sender, 'ST: token owner error');
+    function unstake(uint256 tokenId) public nonReentrant {
+        require(ownerOf(tokenId) == msg.sender || msg.sender == address(this), 'ST: token owner error');
         ReleaseInfo storage info = releaseInfo[tokenId];
         uint256 amount = calcUnstakeAmount(tokenId);
         require(amount > 0, 'ST: no token to unstake');
@@ -172,8 +182,8 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         require(stBalance >= amount, 'ST: no enough token to unstake');
         info.releaseAmount = info.releaseAmount.add(amount);
         releasedAmount = releasedAmount.add(amount);
-        SafeERC20.safeTransfer(IERC20(stToken), msg.sender, amount);
-        emit Unstake(msg.sender, tokenId, amount);
+        SafeERC20.safeTransfer(IERC20(stToken), ownerOf(tokenId), amount);
+        emit Unstake(ownerOf(tokenId), tokenId, amount);
     }
 
     function calcUnstakeAmount(uint256 tokenId) public view returns (uint256) {
