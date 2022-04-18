@@ -57,6 +57,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     mapping(uint256 => Strategy) public strategys;
     mapping(uint256 => ReleaseInfo) public releaseInfo;
+    mapping(uint256 => uint256) public strategy2tvl;
 
     event SetLimitValue(uint256 token, uint256 lp);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
@@ -249,6 +250,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     ) internal {
         Strategy storage strategy = strategys[s];
         require(strategy.duration > 0 && strategy.percent > 0, 'ST:strategy not found ');
+        strategy2tvl[s] = strategy2tvl[s].add(lp);
         uint256 value = 0;
         (uint256 amount0, uint256 amount1) = UniswapV2LiquidityMathLibrary.getLiquidityValue(
             IUniswapV2Pair(pair).factory(),
