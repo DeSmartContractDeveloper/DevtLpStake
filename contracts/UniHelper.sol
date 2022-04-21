@@ -7,6 +7,7 @@ import '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/math/SafeMath.sol';
 import '@openzeppelin/contracts/token/ERC20/SafeERC20.sol';
+import './libraries/UniswapV2Library.sol';
 
 contract UniHelper is ReentrancyGuard {
     using SafeMath for uint256;
@@ -33,12 +34,20 @@ contract UniHelper is ReentrancyGuard {
         uint256 amount,
         uint256 amountSwapOutMin,
         uint256 deadline
-    ) external nonReentrant returns (uint256,uint256,uint256) {
+    )
+        external
+        nonReentrant
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         (address tokenFrom, address tokenTo, bool fromIsToken0) = this.sortToken(pair, inputToken);
         _addApprove(tokenFrom);
         _addApprove(tokenTo);
         SafeERC20.safeTransferFrom(IERC20(tokenFrom), msg.sender, address(this), amount);
-        uint256 swapAmount = this.getSwapAmount(pair, amount, fromIsToken0);
+        (uint256 swapAmount, ) = this.getSwapAmount(pair, amount, fromIsToken0);
         address[] memory paths = new address[](2);
         paths[0] = tokenFrom;
         paths[1] = tokenTo;
@@ -69,7 +78,6 @@ contract UniHelper is ReentrancyGuard {
         return (lp, fromBal, toBal);
     }
 
-
     function sortToken(address pair, address inputToken)
         external
         view
@@ -97,11 +105,12 @@ contract UniHelper is ReentrancyGuard {
         address pair,
         uint256 amount,
         bool fromIsToken0
-    ) external view returns (uint256) {
+    ) external view returns (uint256 swapAmount, uint256 outAmount) {
         (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pair).getReserves();
         uint256 r0 = fromIsToken0 ? reserve0 : reserve1;
         uint256 r1 = fromIsToken0 ? reserve1 : reserve0;
-        return _getAmount(amount, 0, r0, r1);
+        swapAmount = _getAmount(amount, 0, r0, r1);
+        outAmount = UniswapV2Library.getAmountOut(swapAmount, r0, r1);
     }
 
     function _getAmount(
