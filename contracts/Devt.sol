@@ -22,6 +22,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         address maker;
         uint256 index;
         uint256 lp;
+        uint256 tokenAmount;
         uint256 amount;
         uint256 amount0;
         uint256 amount1;
@@ -183,9 +184,9 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         require(stBalance >= amount, 'ST: no enough token to unstake');
         info.releaseAmount = info.releaseAmount.add(amount);
         releasedAmount = releasedAmount.add(amount);
-        userStrategyUnstakeAmount[msg.sender][info.index] = userStrategyUnstakeAmount[msg.sender][info.index].add(
-            amount
-        );
+        userStrategyUnstakeAmount[ownerOf(tokenId)][info.index] = userStrategyUnstakeAmount[ownerOf(tokenId)][
+            info.index
+        ].add(amount);
         SafeERC20.safeTransfer(IERC20(stToken), ownerOf(tokenId), amount);
         emit Unstake(ownerOf(tokenId), tokenId, amount);
     }
@@ -241,6 +242,8 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         _stake(pair, lp, s);
         if (amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
         if (amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
+        ReleaseInfo storage info = releaseInfo[this.getCurrNFTCount()];
+        info.tokenAmount = amount.sub(amountA);
     }
 
     function stake(
@@ -286,7 +289,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 price = getStPrice().mul(strategy.percent).div(10000);
         uint256 amount = value.div(price);
         uint256 tokenId = _mintToken();
-        releaseInfo[tokenId] = ReleaseInfo(msg.sender, s, lp, amount, amount0, amount1, value, 0, block.timestamp);
+        releaseInfo[tokenId] = ReleaseInfo(msg.sender, s, lp, 0, amount, amount0, amount1, value, 0, block.timestamp);
         emit Stake(msg.sender, pair, s, lp, tokenId, amount, amount0, amount1, value, price);
     }
 
