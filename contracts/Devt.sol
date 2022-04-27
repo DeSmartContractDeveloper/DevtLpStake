@@ -285,7 +285,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             value = amount1.add(_amount);
         }
         require(value > 0, 'ST: lp value is zero');
-        value = value.mul(1e18); // for price enlarged 1e18, so the value alse enarge 1e18
+        value = value.mul(1e6); // for price enlarged 1e18, but this decimals diff 12 ,so the value just enarge 1e6
         uint256 price = getStPrice().mul(strategy.percent).div(10000);
         uint256 amount = value.div(price);
         uint256 tokenId = _mintToken();
