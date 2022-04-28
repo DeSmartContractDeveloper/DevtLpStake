@@ -239,7 +239,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             amountSwapOutMin,
             deadline
         );
-        _stake(pair, lp, s);
+        _stake(pair, lp, s, amount);
         if (amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
         if (amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
         ReleaseInfo storage info = releaseInfo[this.getCurrNFTCount()];
@@ -257,35 +257,38 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         require(stakedLp.add(lp) <= limitStakeLp, 'ST: overflow limit value');
         stakedLp = stakedLp.add(lp);
         SafeERC20.safeTransferFrom(IERC20(pair), msg.sender, address(this), lp);
-        _stake(pair, lp, s);
+        _stake(pair, lp, s, 0);
     }
 
     function _stake(
         address pair,
         uint256 lp,
-        uint256 s
+        uint256 s,
+        uint256 value
     ) internal {
         Strategy storage strategy = strategys[s];
         require(strategy.duration > 0 && strategy.percent > 0, 'ST:strategy not found ');
         strategy2tvl[s] = strategy2tvl[s].add(lp);
-        uint256 value = 0;
         (uint256 amount0, uint256 amount1) = UniswapV2LiquidityMathLibrary.getLiquidityValue(
             IUniswapV2Pair(pair).factory(),
             IUniswapV2Pair(pair).token0(),
             IUniswapV2Pair(pair).token1(),
             lp
         );
-        if (pairToken0IsStableToken[pair]) {
-            (uint256 amount_, bool effect) = Oracle.consult(pair, IUniswapV2Pair(pair).token1(), amount1);
-            require(effect == true && amount_ > 0, 'ST:Oracle not update 0 ');
-            value = amount0.add(amount_);
-        } else {
-            (uint256 _amount, bool effect) = Oracle.consult(pair, IUniswapV2Pair(pair).token0(), amount0);
-            require(effect == true && _amount > 0, 'ST:Oracle not update 1');
-            value = amount1.add(_amount);
+        if (value == 0) {
+            // from stake lp
+            if (pairToken0IsStableToken[pair]) {
+                (uint256 amount_, bool effect) = Oracle.consult(pair, IUniswapV2Pair(pair).token1(), amount1);
+                require(effect == true && amount_ > 0, 'ST:Oracle not update 0 ');
+                value = amount0.add(amount_);
+            } else {
+                (uint256 _amount, bool effect) = Oracle.consult(pair, IUniswapV2Pair(pair).token0(), amount0);
+                require(effect == true && _amount > 0, 'ST:Oracle not update 1');
+                value = amount1.add(_amount);
+            }
         }
         require(value > 0, 'ST: lp value is zero');
-        value = value.mul(1e6); // for price enlarged 1e18, but this decimals diff 12 ,so the value just enarge 1e6
+        value = value.mul(1e18); //  price enlarged 1e18
         uint256 price = getStPrice().mul(strategy.percent).div(10000);
         uint256 amount = value.div(price);
         uint256 tokenId = _mintToken();

@@ -65,14 +65,8 @@ describe('Test stake lp and back to st token ', async () => {
     await stPair.connect(wallet).mint(wallet.address, overrides)
     let oracle = await deployContract(wallet, OracleJson)
     oracle = oracle.connect(wallet)
-    await oracle.addPair(stPair.address, 300) // set update windows is 5 minutes
-    let blockTimestamp = (await stPair.getReserves())[2]
-    console.log('current block ts ', blockTimestamp)
-    await provider.send('evm_mine', [blockTimestamp + 60 * 6])
-    await oracle.updatePairs()
-    blockTimestamp = (await stPair.getReserves())[2]
-    console.log('after block ts ', blockTimestamp)
-
+    await oracle.addPair(stPair.address)
+    await oracle.setPairPrice(stPair.address, 1, 1)
     let devtContract = await deployContract(
       wallet,
       DevtJson,
