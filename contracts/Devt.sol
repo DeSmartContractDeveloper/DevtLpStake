@@ -51,6 +51,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     bool public immutable stIsToken0;
 
     uint256 public limitStakeToken;
+    string public contractURI;
     uint256 public limitStakeLp;
     uint256 public stakedToken;
     uint256 public stakedLp;
@@ -122,6 +123,10 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     function setBaseURI(string calldata uri) external onlyOwner {
         _setBaseURI(uri);
+    }
+
+    function setContractURI(string calldata uri) external onlyOwner {
+        contractURI = uri;
     }
 
     function setLimitValue(uint256 _limitStakeToken, uint256 _limitStakeLp) external onlyOwner {
