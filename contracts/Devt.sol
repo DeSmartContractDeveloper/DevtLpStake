@@ -244,11 +244,12 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
             amountSwapOutMin,
             deadline
         );
-        _stake(pair, lp, s, amount);
+        uint256 inAmount = amount.sub(amountA);
         if (amountA > 0) SafeERC20.safeTransfer(IERC20(tokenA), msg.sender, amountA);
         if (amountB > 0) SafeERC20.safeTransfer(IERC20(tokenB), msg.sender, amountB);
+        _stake(pair, lp, s, inAmount);
         ReleaseInfo storage info = releaseInfo[this.getCurrNFTCount()];
-        info.tokenAmount = amount.sub(amountA);
+        info.tokenAmount = inAmount;
     }
 
     function stake(
