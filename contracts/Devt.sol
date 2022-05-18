@@ -51,7 +51,6 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     bool public immutable stIsToken0;
 
     uint256 public limitStakeToken;
-    string public contractURI;
     uint256 public limitStakeLp;
     uint256 public stakedToken;
     uint256 public stakedLp;
@@ -61,6 +60,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     mapping(uint256 => ReleaseInfo) public releaseInfo;
     mapping(uint256 => uint256) public strategy2tvl;
     mapping(address => mapping(uint256 => uint256)) public userStrategyUnstakeAmount;
+    mapping(uint256 => bool) public blacklist;
 
     event SetLimitValue(uint256 token, uint256 lp);
     event StrategyUpdate(uint256 strategy, uint256 percent, uint256 duration);
@@ -86,6 +86,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         uint256 price
     );
     event Unstake(address reciver, uint256 token, uint256 amount);
+    event BlackList(uint256 token, bool _isBlack);
 
     constructor(
         address _stToken,
@@ -125,10 +126,6 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
         _setBaseURI(uri);
     }
 
-    function setContractURI(string calldata uri) external onlyOwner {
-        contractURI = uri;
-    }
-
     function setLimitValue(uint256 _limitStakeToken, uint256 _limitStakeLp) external onlyOwner {
         limitStakeToken = _limitStakeToken;
         limitStakeLp = _limitStakeLp;
@@ -153,6 +150,11 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
 
     function getCurrNFTCount() external view returns (uint256) {
         return _tokenIds.current();
+    }
+
+    function modifyBlackList(uint256 tokenId, bool _black) external onlyOwner {
+        blacklist[tokenId] = _black;
+        emit BlackList(tokenId, _black);
     }
 
     function setPair(
@@ -181,6 +183,7 @@ contract Devt is Ownable, ReentrancyGuard, ERC721, Pausable {
     }
 
     function unstake(uint256 tokenId) public nonReentrant {
+        require(blacklist[tokenId] == false, 'ST:black list');
         require(ownerOf(tokenId) == msg.sender || msg.sender == address(this), 'ST: token owner error');
         ReleaseInfo storage info = releaseInfo[tokenId];
         uint256 amount = calcUnstakeAmount(tokenId);
